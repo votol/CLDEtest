@@ -1,3 +1,6 @@
 [submodule "Workflow"]
 	path = Workflow
 	url = git@github.com:votol/Workflow.git
+[submodule "CLDE"]
+	path = CLDE
+	url = git@github.com:votol/CLDE.git

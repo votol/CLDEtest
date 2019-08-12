@@ -1,0 +1,4 @@
+parameters: {}
+properties:
+    cl_device_type: "GPU"
+    cl_device_number: 0
