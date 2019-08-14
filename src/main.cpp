@@ -8,7 +8,7 @@
 #include "CLmanager.h"
 #include "yaml-cpp/yaml.h"
 #include "schema.h"
-#include "CLBLAS.h"
+#include "DERunge4.h"
 #include "NetCdfWriter.h"
 
 using namespace clde;
@@ -89,21 +89,57 @@ void print_info(ICLmanager* manag)
 
 }
 
+class testOperator: public IDEOperator
+{
+    size_t dim;
+public:
+    testOperator(const size_t& in):dim(in){}
+    const size_t & dimension() override
+    {
+        return dim;
+    }
+    void apply(const CLDataStorage<double> &in, CLDataStorage<double> &out, const std::vector<double> &) override
+    {
+        out = in;
+    }
+};
+
+class testOutput: public IDEOutput
+{
+    std::vector<double> result;
+    unsigned int ind = 0;
+public:
+    testOutput(const size_t& in): result(in){}
+    void apply(const CLDataStorage<double> &in, const std::vector<double> &) override
+    {
+        result[ind] = in.read()[0];
+        ind += 1;
+    }
+    const std::vector<double>& data()
+    {
+        return result;
+    }
+};
+
 int main(int argc, char **argv)
 {
     YAML::Node config = YAML::LoadFile(argv[1]);
     size_t num = 20000000;
+    size_t out_num = 100;
     std::shared_ptr<ICLmanager> manag = std::make_shared<CLmanager>(config["properties"]);
-    CLDataStorage<double> a(std::vector<double>(num, 0.7), manag);
-    CLDataStorage<double> a1(std::vector<double>(num, 1.7), manag);
-    CLDataStorage<double> b(10000000, manag);
-    b = std::vector<double>(num, 1.3);
-    CLBLAS blas(manag);
+    testOutput output(out_num);
+    std::list<IDEOutput*> s_outputs;
+    s_outputs.push_back(&output);
+    testOperator oper(num);
+    DERunge4 calc(manag, &oper);
+    calc.SetTimeStep(0.01);
+    calc.SetStepsNumber(1000);
+    calc.SetOutputSteps(out_num);
+    calc.SetInitState(std::vector<double>(num , 1.0));
+    calc.SetOutputs(s_outputs);
+    calc.calculate();
 
-    blas.Daxpy(a, a1, 0.5);
-    blas.Daxpy(a, b, -0.5);
-    auto result = a.read();
-    std::cout << result[100] << std::endl;
+    std::cout<< output.data()[out_num - 1] << std::endl;
     std::string output_dir = config["properties"]
 								  [CLDEtestSchema::PROPERTY_output_path].as<std::string>();
     std::vector<std::unique_ptr<IOutput> > outputs(0);
