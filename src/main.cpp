@@ -9,6 +9,7 @@
 #include "yaml-cpp/yaml.h"
 #include "schema.h"
 #include "DERunge4.h"
+#include "PolynomialOperator.h"
 #include "NetCdfWriter.h"
 
 using namespace clde;
@@ -89,21 +90,6 @@ void print_info(ICLmanager* manag)
 
 }
 
-class testOperator: public IDEOperator
-{
-    size_t dim;
-public:
-    testOperator(const size_t& in):dim(in){}
-    const size_t & dimension() override
-    {
-        return dim;
-    }
-    void apply(const CLDataStorage<double> &in, CLDataStorage<double> &out, const std::vector<double> &) override
-    {
-        out = in;
-    }
-};
-
 class testOutput: public IDEOutput
 {
     std::vector<double> result;
@@ -121,6 +107,11 @@ public:
     }
 };
 
+void buildOperator(std::list<Monomial>& in)
+{
+
+}
+
 int main(int argc, char **argv)
 {
     YAML::Node config = YAML::LoadFile(argv[1]);
@@ -130,7 +121,10 @@ int main(int argc, char **argv)
     testOutput output(out_num);
     std::list<IDEOutput*> s_outputs;
     s_outputs.push_back(&output);
-    testOperator oper(num);
+
+    std::list<Monomial> monomials;
+    buildOperator(monomials);
+    PolynomialOperator oper(monomials.begin(), monomials.end());
     DERunge4 calc(manag, &oper);
     calc.SetTimeStep(0.01);
     calc.SetStepsNumber(1000);
