@@ -109,7 +109,40 @@ public:
 
 void buildOperator(std::list<Monomial>& in)
 {
-
+    for(unsigned int ind = 0; ind<16;++ind)
+    {
+        if(ind != 0)
+        {
+            in.push_back(Monomial());
+            in.back().outInd = ind;
+            in.back().coe = 1.0;
+            in.back().inInds.push_back(ind - 1);
+        }
+        if(ind!= 15)
+        {
+            in.push_back(Monomial());
+            in.back().outInd = ind;
+            in.back().coe = 1.0;
+            in.back().inInds.push_back(ind + 1);
+        }
+    }
+    for(unsigned int ind = 0; ind<16;++ind)
+    {
+        if(ind != 0)
+        {
+            in.push_back(Monomial());
+            in.back().outInd = ind;
+            in.back().coe = 0.3;
+            in.back().inInds.push_back(ind - 1);
+        }
+        if(ind!= 15)
+        {
+            in.push_back(Monomial());
+            in.back().outInd = ind;
+            in.back().coe = 0.3;
+            in.back().inInds.push_back(ind + 1);
+        }
+    }
 }
 
 int main(int argc, char **argv)
@@ -124,7 +157,7 @@ int main(int argc, char **argv)
 
     std::list<Monomial> monomials;
     buildOperator(monomials);
-    PolynomialOperator oper(monomials.begin(), monomials.end());
+    PolynomialOperator oper(monomials.begin(), monomials.end(), 1, manag);
     DERunge4 calc(manag, &oper);
     calc.SetTimeStep(0.01);
     calc.SetStepsNumber(1000);
