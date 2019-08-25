@@ -107,66 +107,91 @@ public:
     }
 };
 
-void buildOperator(std::list<Monomial>& in)
+void buildOperator(std::list<MonomialC>& in)
 {
-    for(unsigned int ind = 0; ind<16;++ind)
-    {
-        if(ind != 0)
-        {
-            in.push_back(Monomial());
-            in.back().outInd = ind;
-            in.back().coe = 1.0;
-            in.back().inInds.push_back(ind - 1);
-        }
-        if(ind!= 15)
-        {
-            in.push_back(Monomial());
-            in.back().outInd = ind;
-            in.back().coe = 1.0;
-            in.back().inInds.push_back(ind + 1);
-        }
-    }
-    for(unsigned int ind = 0; ind<16;++ind)
-    {
-        if(ind != 0)
-        {
-            in.push_back(Monomial());
-            in.back().outInd = ind;
-            in.back().coe = 0.3;
-            in.back().inInds.push_back(ind - 1);
-        }
-        if(ind!= 15)
-        {
-            in.push_back(Monomial());
-            in.back().outInd = ind;
-            in.back().coe = 0.3;
-            in.back().inInds.push_back(ind + 1);
-        }
-    }
+    in.push_back(MonomialC());
+    in.back().coe = std::complex(-1.0,0.0);
+    in.back().inInds.push_back(0);
+    in.back().outInd = 0;
+    in.push_back(MonomialC());
+    in.back().coe = std::complex(0.0,-1.0);
+    in.back().inInds.push_back(0);
+    in.back().inInds.push_back(0);
+    in.back().inInds.push_back(1);
+    in.back().outInd = 0;
+    in.push_back(MonomialC());
+    in.back().coe = std::complex(1.0,0.0);
+    in.back().outInd = 0;
+    in.push_back(MonomialC());
+    in.back().coe = std::sqrt(std::complex(0.0,1.0));
+    in.back().inInds.push_back(0);
+    in.back().tFunc = 0;
+    in.back().outInd = 0;
+
+    in.push_back(MonomialC());
+    in.back().coe = std::complex(-1.0,0.0);
+    in.back().inInds.push_back(1);
+    in.back().outInd = 1;
+    in.push_back(MonomialC());
+    in.back().coe = std::complex(0.0,-1.0);
+    in.back().inInds.push_back(1);
+    in.back().inInds.push_back(1);
+    in.back().inInds.push_back(0);
+    in.back().outInd = 1;
+    in.push_back(MonomialC());
+    in.back().coe = std::complex(1.0,0.0);
+    in.back().outInd = 1;
+    in.push_back(MonomialC());
+    in.back().coe = std::sqrt(std::complex(0.0,-1.0));
+    in.back().inInds.push_back(1);
+    in.back().tFunc = 1;
+    in.back().outInd = 1;
 }
+
+void print(const std::list<Monomial>& in)
+{
+    for(auto it = in.begin();it != in.end();++it)
+    {
+        std::cout<< it->outInd<< " : " << it->coe;
+        if(it->inInds .size() !=0)
+            std::cout<< " : ";
+        for(auto it1 = it->inInds.begin(); it1 != it->inInds.end(); ++it1)
+        {
+            std::cout << *it1;
+            if(it1 != --it->inInds.end())
+                std::cout << " , ";
+        }
+        std::cout<<std::endl;
+    }
+    std::cout<<"----------------------"<<std::endl;
+}
+
 
 int main(int argc, char **argv)
 {
     YAML::Node config = YAML::LoadFile(argv[1]);
-    size_t num = 20000000;
     size_t out_num = 100;
     std::shared_ptr<ICLmanager> manag = std::make_shared<CLmanager>(config["properties"]);
     testOutput output(out_num);
     std::list<IDEOutput*> s_outputs;
     s_outputs.push_back(&output);
 
-    std::list<Monomial> monomials;
+    std::list<MonomialC> monomials;
     buildOperator(monomials);
-    PolynomialOperator oper(monomials.begin(), monomials.end(), 1, manag);
+    std::list<Monomial> real_monomials(convertMonomials(monomials));
+    //print(real_monomials);
+    PolynomialOperator oper(real_monomials.begin(), real_monomials.end(), 8000, manag);
     DERunge4 calc(manag, &oper);
-    calc.SetTimeStep(0.01);
-    calc.SetStepsNumber(1000);
+    calc.SetTimeStep(0.000008);
+    calc.SetStepsNumber(500000);
     calc.SetOutputSteps(out_num);
-    calc.SetInitState(std::vector<double>(num , 1.0));
+    std::vector<double> init(oper.dimension() , 0.0);
+    init[0] = 1.0;
+    calc.SetInitState(init);
     calc.SetOutputs(s_outputs);
     calc.calculate();
-
     std::cout<< output.data()[out_num - 1] << std::endl;
+
     std::string output_dir = config["properties"]
 								  [CLDEtestSchema::PROPERTY_output_path].as<std::string>();
     std::vector<std::unique_ptr<IOutput> > outputs(0);
