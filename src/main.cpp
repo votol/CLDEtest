@@ -10,6 +10,7 @@
 #include "schema.h"
 #include "DERunge4.h"
 #include "PolynomialOperator.h"
+#include "WienerFuncCalculator.h"
 #include "NetCdfWriter.h"
 
 using namespace clde;
@@ -176,11 +177,15 @@ int main(int argc, char **argv)
     std::list<IDEOutput*> s_outputs;
     s_outputs.push_back(&output);
 
+    std::shared_ptr<IFuncCalculator> wiener = std::make_shared<WienerFuncCalculator>(manag);
+    //wiener->init(1234);
+    //wiener->process(1.0);
     std::list<MonomialC> monomials;
     buildOperator(monomials);
     std::list<Monomial> real_monomials(convertMonomials(monomials));
     //print(real_monomials);
     PolynomialOperator oper(real_monomials.begin(), real_monomials.end(), 8000, manag);
+    oper.setTimeFuncCalculator(wiener);
     DERunge4 calc(manag, &oper);
     calc.SetTimeStep(0.000008);
     calc.SetStepsNumber(500000);
