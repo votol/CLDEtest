@@ -97,7 +97,7 @@ class testOutput: public IDEOutput
     unsigned int ind = 0;
 public:
     testOutput(const size_t& in): result(in){}
-    void apply(const CLDataStorage<double> &in, const std::vector<double> &) override
+    virtual void apply(const CLDataStorage<double> &in, const std::vector<double> &) override
     {
         result[ind] = in.read()[0];
         ind += 1;
@@ -177,20 +177,20 @@ int main(int argc, char **argv)
     std::list<IDEOutput*> s_outputs;
     s_outputs.push_back(&output);
 
-    std::shared_ptr<IFuncCalculator> wiener = std::make_shared<WienerFuncCalculator>(manag);
+    std::shared_ptr<IFuncCalculator> wiener = std::static_pointer_cast<IFuncCalculator, WienerFuncCalculator>(std::make_shared<WienerFuncCalculator>(manag));
     //wiener->init(1234);
     //wiener->process(1.0);
     std::list<MonomialC> monomials;
     buildOperator(monomials);
     std::list<Monomial> real_monomials(convertMonomials(monomials));
     //print(real_monomials);
-    PolynomialOperator oper(real_monomials.begin(), real_monomials.end(), 8000, manag);
+    PolynomialOperator oper(real_monomials.begin(), real_monomials.end(), 8000, manag, true);
     oper.setTimeFuncCalculator(wiener);
     DERunge4 calc(manag, &oper);
     calc.SetTimeStep(0.000008);
     calc.SetStepsNumber(500000);
     calc.SetOutputSteps(out_num);
-    std::vector<double> init(oper.dimension() , 0.0);
+    std::vector<double> init(oper.dimension().in_dim , 0.0);
     init[0] = 1.0;
     calc.SetInitState(init);
     calc.SetOutputs(s_outputs);
