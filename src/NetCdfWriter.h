@@ -8,7 +8,7 @@
 class NetCdfWriter
 {
 public:
-	NetCdfWriter(const std::string &, std::vector<std::unique_ptr<IOutput> >&, const unsigned int&);
+    NetCdfWriter(const std::string &, std::vector<IOutput* >&, const unsigned int&);
 	~NetCdfWriter(){};
 };
 

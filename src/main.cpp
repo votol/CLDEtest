@@ -9,7 +9,7 @@
 #include "yaml-cpp/yaml.h"
 #include "schema.h"
 #include "DERunge4.h"
-#include "PolynomialOperator.h"
+#include "PolynomialOutput.h"
 #include "WienerFuncCalculator.h"
 #include "NetCdfWriter.h"
 
@@ -91,22 +91,6 @@ void print_info(ICLmanager* manag)
 
 }
 
-class testOutput: public IDEOutput
-{
-    std::vector<double> result;
-    unsigned int ind = 0;
-public:
-    testOutput(const size_t& in): result(in){}
-    virtual void apply(const CLDataStorage<double> &in, const std::vector<double> &) override
-    {
-        result[ind] = in.read()[0];
-        ind += 1;
-    }
-    const std::vector<double>& data()
-    {
-        return result;
-    }
-};
 
 void buildOperator(std::list<MonomialC>& in)
 {
@@ -149,6 +133,16 @@ void buildOperator(std::list<MonomialC>& in)
     in.back().outInd = 1;
 }
 
+void buildOutput(std::list<MonomialC>& in)
+{
+    in.push_back(MonomialC());
+    in.back().coe = std::complex(1.0,0.0);
+    in.back().inInds.push_back(0);
+    in.back().inInds.push_back(1);
+    in.back().outInd = 0;
+}
+
+
 void print(const std::list<Monomial>& in)
 {
     for(auto it = in.begin();it != in.end();++it)
@@ -167,25 +161,61 @@ void print(const std::list<Monomial>& in)
     std::cout<<"----------------------"<<std::endl;
 }
 
+class outTmp: public PolynomialOutput, public IOutput
+{
+private:
+    std::string m_name = "out";
+    std::vector<size_t> dims;
+public:
+    template<typename _InputIterator,
+         typename = std::_RequireInputIter<_InputIterator>>
+    outTmp(_InputIterator begin,  _InputIterator end,
+           const unsigned int& num, const OperatorDimension& dim, const unsigned int& calc_count,
+           const std::shared_ptr<ICLmanager>& context): PolynomialOutput(begin,end, num, dim, calc_count, context)
+    {
+        dims.push_back(dim.out_dim);
+    }
+
+    virtual const std::string& GetName() override
+    {
+        return m_name;
+    }
+    virtual const std::vector<double>& GetData() override
+    {
+        return m_result;
+    }
+    virtual const std::vector<size_t>& GetDimensions() override
+    {
+        return dims;
+    }
+};
+
 
 int main(int argc, char **argv)
 {
     YAML::Node config = YAML::LoadFile(argv[1]);
-    size_t out_num = 100;
+    size_t out_num = 200;
+    size_t traj_num = 8000;
     std::shared_ptr<ICLmanager> manag = std::make_shared<CLmanager>(config["properties"]);
-    testOutput output(out_num);
     std::list<IDEOutput*> s_outputs;
-    s_outputs.push_back(&output);
 
     std::shared_ptr<IFuncCalculator> wiener = std::static_pointer_cast<IFuncCalculator, WienerFuncCalculator>(std::make_shared<WienerFuncCalculator>(manag));
-    //wiener->init(1234);
-    //wiener->process(1.0);
     std::list<MonomialC> monomials;
     buildOperator(monomials);
     std::list<Monomial> real_monomials(convertMonomials(monomials));
-    //print(real_monomials);
-    PolynomialOperator oper(real_monomials.begin(), real_monomials.end(), 8000, manag, true);
+
+    OperatorDimension operDim = PolynomialOperator::calculateDimension(real_monomials.begin(), real_monomials.end(), true);
+    PolynomialOperator oper(real_monomials.begin(), real_monomials.end(), traj_num, operDim, manag);
     oper.setTimeFuncCalculator(wiener);
+
+    std::list<MonomialC> monomialsOut;
+    buildOutput(monomialsOut);
+    std::list<Monomial> real_monomialsOut(convertMonomials(monomialsOut));
+    OperatorDimension outDim = PolynomialOperator::calculateDimension(real_monomialsOut.begin(), real_monomialsOut.end(), false);
+    outDim.in_dim = operDim.in_dim;
+    outTmp output(real_monomialsOut.begin(), real_monomialsOut.end(), traj_num, outDim, out_num, manag);
+    s_outputs.push_back(&output);
+
     DERunge4 calc(manag, &oper);
     calc.SetTimeStep(0.000008);
     calc.SetStepsNumber(500000);
@@ -195,13 +225,13 @@ int main(int argc, char **argv)
     calc.SetInitState(init);
     calc.SetOutputs(s_outputs);
     calc.calculate();
-    std::cout<< output.data()[out_num - 1] << std::endl;
 
     std::string output_dir = config["properties"]
 								  [CLDEtestSchema::PROPERTY_output_path].as<std::string>();
-    std::vector<std::unique_ptr<IOutput> > outputs(0);
+    std::vector<IOutput* > outputs(0);
+    outputs.push_back(&output);
     NetCdfWriter netcdf_writer_instance(
-			output_dir + "/output.nc", outputs, 0);
+            output_dir + "/output.nc", outputs, out_num);
 
     return 0;
 }
