@@ -190,6 +190,37 @@ public:
     }
 };
 
+void testDerivative()
+{
+    Polynomial poly;
+    poly.push_back(Monomial());
+    poly.back().coe = 2.0;
+    poly.back().inInds.push_back(0);
+    poly.back().inInds.push_back(0);
+    poly.back().inInds.push_back(1);
+    poly.back().inInds.push_back(2);
+    poly.back().inInds.push_back(3);
+    poly.back().inInds.push_back(0);
+    poly.back().outInd = 0;
+
+    poly.push_back(Monomial());
+    poly.back().coe = 3.0;
+    poly.back().inInds.push_back(0);
+    poly.back().inInds.push_back(2);
+    poly.back().inInds.push_back(1);
+    poly.back().inInds.push_back(0);
+    poly.back().inInds.push_back(0);
+    poly.back().inInds.push_back(3);
+    poly.back().outInd = 0;
+
+    std::cout<< "derivative" << std::endl;
+    auto res = polynomialDerivative(poly, 5);
+    for(auto it = res.begin(); it != res.end(); ++ it)
+    {
+        std::cout << *it <<std::endl;
+    }
+    std::cout << "derivative end" <<std::endl;
+}
 
 int main(int argc, char **argv)
 {
@@ -197,6 +228,8 @@ int main(int argc, char **argv)
     size_t out_num = 200;
     size_t traj_num = 8000;
     std::shared_ptr<ICLmanager> manag = std::make_shared<CLmanager>(config["properties"]);
+
+    testDerivative();
     std::list<IDEOutput*> s_outputs;
 
     std::shared_ptr<IFuncCalculator> wiener = std::static_pointer_cast<IFuncCalculator, WienerFuncCalculator>(std::make_shared<WienerFuncCalculator>(manag));
@@ -224,7 +257,7 @@ int main(int argc, char **argv)
     init[0] = 1.0;
     calc.SetInitState(init);
     calc.SetOutputs(s_outputs);
-    calc.calculate();
+    //calc.calculate();
 
     std::string output_dir = config["properties"]
 								  [CLDEtestSchema::PROPERTY_output_path].as<std::string>();

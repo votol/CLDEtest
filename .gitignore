@@ -1,2 +1,2 @@
 workDir
-CMakeLists.txt.user
+*.user*

@@ -42,7 +42,8 @@ add_executable(${PROJECT_NAME}
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
 target_link_libraries (${PROJECT_NAME} ~/lib/libyaml-cpp.so
                                         clde
-                                        netcdf_c++4)
+                                        netcdf_c++4
+                                        netcdf)
 
 
 
